@@ -10,23 +10,20 @@ class GestorMemoria:
         self.usada = 0
         print(f"[GESTOR] Memoria total disponible: {self.total} unidades.")
 
-    def asignar(self, cantidad):
-        """Asigna memoria si hay suficiente espacio."""
+    def reservar(self, proceso, cantidad):
+        """Reserva memoria para un proceso si hay suficiente espacio."""
         if self.usada + cantidad <= self.total:
             self.usada += cantidad
-            print(f"[GESTOR] Asignadas {cantidad} unidades. Memoria usada: {self.usada}/{self.total}")
+            print(f"[GESTOR] Reservadas {cantidad} unidades para {proceso}. Memoria usada: {self.usada}/{self.total}")
             return True
         else:
-            print("[GESTOR] Error: Memoria insuficiente.")
+            print(f"[GESTOR] Error: Memoria insuficiente para {proceso}.")
             return False
 
     def liberar(self, cantidad):
         """Libera memoria usada."""
-        if cantidad <= self.usada:
-            self.usada -= cantidad
-            print(f"[GESTOR] Liberadas {cantidad} unidades. Memoria usada: {self.usada}/{self.total}")
-        else:
-            print("[GESTOR] Error: No se puede liberar más memoria de la usada.")
+        self.usada = max(0, self.usada - cantidad)
+        print(f"[GESTOR] Liberadas {cantidad} unidades. Memoria usada: {self.usada}/{self.total}")
 
 class Objeto:
     """Objeto que ocupa memoria simulada."""
@@ -34,7 +31,7 @@ class Objeto:
         self.nombre = nombre
         self.memoria = memoria
         self.gestor = gestor
-        if self.gestor.asignar(memoria):
+        if self.gestor.reservar(nombre, memoria):
             print(f"[CREADO] Objeto '{self.nombre}' creado usando {self.memoria} unidades.")
         else:
             print(f"[ERROR] No se pudo crear el objeto '{self.nombre}' por falta de memoria.")
@@ -77,3 +74,4 @@ if __name__ == "__main__":
 
     # Liberar memoria
     liberar_memoria(objetos)
+
