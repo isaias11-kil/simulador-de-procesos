@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from gestor_memoria import GestorMemoria
 from scheduler import Scheduler, Proceso
+from proceso import Proceso, GENERADORPROCESOS  
+import threading
 
 # Inicializar sistema
 memoria_total = 1024
@@ -34,21 +36,45 @@ def crear_proceso():
         nombre = entrada_nombre.get()
         memoria = int(entrada_memoria.get())
         duracion = int(entrada_duracion.get())
-        pid = len(planificador.procesos_activos) + planificador.cola.qsize() + 1
-        proceso = Proceso(pid, nombre, memoria, duracion)
+        descripcion = f"Memoria: {memoria}MB, Duración: {duracion}s"
+        pasos = [f"Ejecutar durante {duracion} segundos", f"Usar {memoria} MB de memoria"]
+        proceso = Proceso(nombre, descripcion, pasos, memoria, duracion)
 
-        if gestor_memoria.reservar(proceso, memoria):
-            planificador.agregar_proceso(proceso)
-            actualizar_listas()
-            planificador.iniciar()
+        if len(planificador.procesos_activos) == 0:
+            # Si no hay procesos activos, revisa memoria y ejecuta
+            if gestor_memoria.reservar(proceso, memoria):
+                planificador.procesos_activos.append(proceso)
+                actualizar_listas()
+                threading.Thread(target=ejecutar_y_finalizar_proceso, args=(proceso, memoria), daemon=True).start()
+            else:
+                messagebox.showwarning("Memoria insuficiente", f"No hay suficiente memoria para {nombre}")
         else:
-            messagebox.showwarning("Memoria insuficiente", f"No hay suficiente memoria para {nombre}")
+            # Si hay procesos activos, manda a la cola
+            planificador.cola.put(proceso)
+            actualizar_listas()
+            messagebox.showinfo("En cola", f"El proceso '{nombre}' fue puesto en cola.")
 
         entrada_nombre.delete(0, tk.END)
         entrada_memoria.delete(0, tk.END)
         entrada_duracion.delete(0, tk.END)
     except ValueError:
         messagebox.showerror("Error", "Verifica que los campos numéricos estén correctos.")
+
+def ejecutar_y_finalizar_proceso(proceso, memoria):
+    proceso.ejecutar()
+    gestor_memoria.liberar(memoria)
+    if proceso in planificador.procesos_activos:
+        planificador.procesos_activos.remove(proceso)
+    actualizar_listas()
+    # Ejecuta el siguiente proceso en cola si existe
+    if planificador.cola.qsize() > 0:
+        siguiente = planificador.cola.get()
+        if gestor_memoria.reservar(siguiente, siguiente.memoria):
+            planificador.procesos_activos.append(siguiente)
+            actualizar_listas()
+            threading.Thread(target=ejecutar_y_finalizar_proceso, args=(siguiente, siguiente.memoria), daemon=True).start()
+        else:
+            planificador.cola.put(siguiente)  # Si no hay memoria, regresa a la cola
 
 tk.Button(frame_form, text="Agregar Proceso", command=crear_proceso).grid(row=3, columnspan=2, pady=5)
 
@@ -80,13 +106,15 @@ lista_cola.pack(fill="both", expand=True)
 def actualizar_listas():
     lista_activos.delete(0, tk.END)
     for p in planificador.procesos_activos:
-        lista_activos.insert(tk.END, f"{p.pid} - {p.nombre} ({p.memoria} MB)")
+        lista_activos.insert(tk.END, f"{p.id} - {p.nombre} ({p.descripcion})")
 
     lista_cola.delete(0, tk.END)
     for p in list(planificador.cola.queue):
-        lista_cola.insert(tk.END, f"{p.pid} - {p.nombre} ({p.memoria} MB)")
+        lista_cola.insert(tk.END, f"{p.id} - {p.nombre} ({p.descripcion})")
 
 def actualiza_barras():
+
+    
     barra_memoria["value"] = gestor_memoria.usada
     label_memoria.config(text=f"Memoria usada: {gestor_memoria.usada} MB")
     actualizar_listas()
@@ -94,4 +122,6 @@ def actualiza_barras():
 
 actualiza_barras()
 ventana.mainloop()
+
+
         
