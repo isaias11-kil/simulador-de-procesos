@@ -1,60 +1,78 @@
-# version 1.1
-import time
-import threading
-from queue import Queue
+# gestor_memoria.py
+# Ejemplo de gestión dinámica de memoria y liberación + clase GestorMemoria
 
-class Proceso:
-    def __init__(self, pid, nombre, memoria, duracion):
-        self.pid = pid
+import gc  # Módulo de recolección de basura
+
+class GestorMemoria:
+    """Simula un gestor de memoria manual."""
+    def __init__(self, total_memoria):
+        self.total = total_memoria
+        self.usada = 0
+        print(f"[GESTOR] Memoria total disponible: {self.total} unidades.")
+
+    def reservar(self, proceso, cantidad):
+        """Reserva memoria para un proceso si hay suficiente espacio."""
+        if self.usada + cantidad <= self.total:
+            self.usada += cantidad
+            print(f"[GESTOR] Reservadas {cantidad} unidades para {proceso}. Memoria usada: {self.usada}/{self.total}")
+            return True
+        else:
+            print(f"[GESTOR] Error: Memoria insuficiente para {proceso}.")
+            return False
+
+    def liberar(self, cantidad):
+        """Libera memoria usada."""
+        self.usada = max(0, self.usada - cantidad)
+        print(f"[GESTOR] Liberadas {cantidad} unidades. Memoria usada: {self.usada}/{self.total}")
+
+class Objeto:
+    """Objeto que ocupa memoria simulada."""
+    def __init__(self, nombre, memoria, gestor):
         self.nombre = nombre
         self.memoria = memoria
-        self.duracion = duracion
-        self.tiempo_restante = duracion
+        self.gestor = gestor
+        if self.gestor.reservar(nombre, memoria):
+            print(f"[CREADO] Objeto '{self.nombre}' creado usando {self.memoria} unidades.")
+        else:
+            print(f"[ERROR] No se pudo crear el objeto '{self.nombre}' por falta de memoria.")
 
-    def __repr__(self):
-        return f"Proceso(PID: {self.pid}, Nombre: {self.nombre}, Memoria: {self.memoria}MB, Duración: {self.duracion}s)"
+    def __del__(self):
+        print(f"[ELIMINADO] Objeto '{self.nombre}' eliminado. Liberando {self.memoria} unidades.")
+        self.gestor.liberar(self.memoria)
 
+def crear_objetos(cantidad, gestor, memoria_por_objeto):
+    """Crea una lista de objetos dinámicamente."""
+    lista = []
+    for i in range(1, cantidad + 1):
+        lista.append(Objeto(f"Objeto-{i}", memoria_por_objeto, gestor))
+    return lista
 
-class Scheduler:
-    def __init__(self, gestor_memoria):
-        self.gestor_memoria = gestor_memoria
-        self.cola = Queue()
-        self.procesos_activos = []
-        self.ejecutando = False
+def liberar_memoria(lista):
+    """Libera la memoria eliminando la lista y forzando el garbage collector."""
+    print("\n[ACCION] Liberando memoria...")
+    del lista
+    gc.collect()
+    print("[ACCION] Memoria liberada.\n")
 
-    def agregar_proceso(self, proceso):
-        self.cola.put(proceso)
-        print(f"Proceso agregado: {proceso}")
+if __name__ == "__main__":
+    try:
+        total_memoria = int(input("Ingrese la memoria total disponible: "))
+        cantidad = int(input("Ingrese la cantidad de objetos a crear: "))
+        memoria_por_objeto = int(input("Ingrese la memoria que ocupa cada objeto: "))
+    except ValueError:
+        print("⚠️ Debe ingresar valores numéricos enteros.")
+        exit()
 
-    def planificar_sjf(self):
-        if self.cola.empty():
-            return None
-        procesos = list(self.cola.queue)
-        procesos.sort(key=lambda p: p.duracion)
-        self.cola.queue.clear()
-        for p in procesos[1:]:
-            self.cola.put(p)
-        return procesos[0]
+    # Crear gestor de memoria
+    gestor = GestorMemoria(total_memoria)
 
-    def ejecutar_proceso(self, proceso):
-        self.procesos_activos.append(proceso)
-        while proceso.tiempo_restante > 0 and self.ejecutando:
-            time.sleep(1)
-            proceso.tiempo_restante -= 1
-        self.procesos_activos.remove(proceso)
-        self.gestor_memoria.liberar(proceso.memoria)
+    # Crear lista dinámica de objetos
+    objetos = crear_objetos(cantidad, gestor, memoria_por_objeto)
+    
+    print("\n[INFO] Objetos creados en memoria.")
+    input("Presione Enter para liberar memoria...")
 
-    def iniciar(self):
-        if not self.ejecutando:
-            self.ejecutando = True
-            threading.Thread(target=self._loop, daemon=True).start()
+    # Liberar memoria
+    liberar_memoria(objetos)
 
-    def _loop(self):
-        while self.ejecutando and not self.cola.empty():
-            proceso = self.planificar_sjf()
-            if proceso:
-                self.ejecutar_proceso(proceso)
-
-    def detener(self):
-        self.ejecutando = False
 
