@@ -14,11 +14,13 @@ class Proceso:
 
     contador_ids = 0
 
-    def __init__(self, nombre, descripcion="", pasos=None):
+    def __init__(self, nombre, descripcion="", pasos=None, memoria=0, duracion=0):
         Proceso.contador_ids +=1
         self.id = Proceso.contador_ids
         self.nombre = nombre
         self.descripcion = descripcion
+        self.memoria = memoria      # <-- Nuevo atributo
+        self.duracion = duracion    # <-- Nuevo atributo
         self.estado = estadoProceso.No_iniciado
         self.fecha_creacion = datetime.now()
         self.fecha_actualizacion = datetime.now()
@@ -33,25 +35,17 @@ class Proceso:
     def ejecutar(self):
         self.estado = estadoProceso.Ejecutando
         self.actualizar()
-
         try:
-            for i, paso in enumerate(self.pasos):
-                self.paso_actual = i + 1  # Actualiza el paso actual
-                print(f"ejecutano paso {self.paso_actual}: {paso}")
-                time.sleep(random.uniform(0.5,2)) 
-                
-                if random.random() < 0.1:
-                    raise Exception(f"Error simulado en el paso {self.paso_actual}")
-                
-                self.estado = estadoProceso.Ejecutando
-                self.resultado = "proceso completado exitosamente"
-
+            # Simula la ejecución por el tiempo total indicado
+            print(f"Ejecutando proceso '{self.nombre}' durante {self.duracion} segundos...")
+            time.sleep(self.duracion)
+            self.estado = estadoProceso.Terminado
+            self.resultado = "proceso completado exitosamente"
         except Exception as e:
             self.estado = estadoProceso.Error
             self.resultado = str(e)
-
         finally:
-            self.actualizar()  # Corrige el nombre del método
+            self.actualizar()
             return self.resultado
         
     def pausar(self):
@@ -125,3 +119,4 @@ if __name__ == "__main__":
         resultado = proceso_auto.ejecutar()
         print(f"Resultado: {resultado}")
         print(proceso_auto)
+
