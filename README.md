@@ -84,5 +84,36 @@ python3 simumem_gui.py
 Proyecto académico. Uso educativo.
 
 ---
+#  Módulo `procesos.py`
+
+## 📖 Introducción
+El módulo `procesos.py` define la estructura de los procesos utilizados en el simulador de planificación de procesos.  
+Incluye la clase `Proceso` con **PID autogenerado**, validaciones y funciones auxiliares para crear procesos individuales o en lote.
+
+---
+
+## Especificaciones
+- **PID**: Identificador único numérico, generado automáticamente.  
+- **Nombre**: Nombre del proceso (string, obligatorio).  
+- **Tiempo en CPU**: Unidades de tiempo requeridas (> 0).  
+- **Instante de llegada**: Tiempo de ingreso al sistema (≥ 0).  
+- **Quantum**: Tiempo asignado (opcional, para Round Robin).  
+- **Constante**: `UNIDAD_TIEMPO_SEGUNDOS = 5`.  
+
+---
+
+## Funcionalidades
+```python
+from procesos import crear_proceso, crear_lote_procesos
+
+# Crear un proceso individual
+p1 = crear_proceso("A", tiempo_cpu=5, instante_llegada=0)
+
+# Crear un lote de procesos
+lote = [
+    {"nombre": "A", "tiempo_cpu": 5, "instante_llegada": 0},
+    {"nombre": "B", "tiempo_cpu": 3, "instante_llegada": 2}
+]
+procesos = crear_lote_procesos(lote)
 
 
